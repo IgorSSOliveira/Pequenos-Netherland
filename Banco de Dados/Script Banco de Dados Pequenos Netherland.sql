@@ -1,15 +1,3 @@
--- Ola professora obrigado por validar meu script/modelagem e desculpe incomoda-la nesse sabado 
--- O script fiz espelhado na modelagem e realizei comentarios para a senhora ter uma compreenção melhor, talvez nem precisasse porque o leigo aqui sou eu kkakakakaakakak mas fiz
--- a regra de negocio se baseia na seguinte visão
--- O usuario so pode existir se ele aceitar as permissoes
--- o usuario pode tanto aceitar quanto não os cookies podendo escolher um ou mais tipos de cookies mas os cokkies sao de apenas um usuario
--- o usuario pode ter uma e apenas uma ou nenhuma avaiação assim como a avaliação pode ser de apenas um unico usuario mas a avaliação depende do usuario para existir
--- a avaliação pode ter varias descriçoes e a descrição apenas de uma avaliação e a para ter uma descrição deve haver uma avaliação antes
--- as funcionalidades do script fiz pensando em que atividdes quero que a API realize se tiver algo e remover, melhorar ou revisar pode me dizer por email ou comentar aqui ou diretamente no script, o que for melhor para a senhora 
--- no script a senhora podera ver algumas tags que a senhora n ensinou mas eu pesquisei e implementei porque achei o conseito delas legal como o duplicate, o cascade, o enum, o TIMESTAMP/CURRENT_TIMESTAMP...
--- se por acaso eu tiver implementado algum de forma errada ou no contexto errado posso ter me equivocado na minha compreenção, então poderia dizer se devo remover ou algo do tipo e me explicar caso eu tenha entendido algum deles errado
--- se ficar com duvida pode entrar em contato aguardo retorno e gradesço novamente a atenção
-
 CREATE DATABASE Pequenos_Netherland;
 USE Pequenos_Netherland;
 
@@ -20,6 +8,7 @@ CREATE TABLE Permissoes (
     politicaPrivacidade ENUM('aceito') NOT NULL DEFAULT 'aceito'  -- Valor padrão 'aceito'
 );
 
+-- Criando a tabela Usuario
 CREATE TABLE Usuario (
     idUsuario INT AUTO_INCREMENT PRIMARY KEY,
     nomeCompleto VARCHAR(255) NOT NULL,
@@ -27,44 +16,42 @@ CREATE TABLE Usuario (
     senha VARCHAR(255) NOT NULL,
     dataCadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     idPermissoes INT NOT NULL,
-    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE CASCADE
+    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE RESTRICT
 );
 
-
+-- Criando a tabela CookiesPersonalizados
 CREATE TABLE CookiesPersonalizados (
-    idCookiePersonalizado INT AUTO_INCREMENT PRIMARY KEY,
-    idUsuario INT NOT NULL,
+    idCookiesPersonalizados INT AUTO_INCREMENT PRIMARY KEY,
     tipoCookie VARCHAR(255) NOT NULL,
     valor ENUM('aceito', 'recusado') NOT NULL,
-    idPermissoes INT,  -- Nova coluna para a permissão
+    idUsuario INT NOT NULL,
+    idPermissoes INT NOT NULL,
     FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE CASCADE,
-    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE SET NULL, -- Ajuste a ação ON DELETE conforme necessário
+    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE RESTRICT,
     UNIQUE (idUsuario, tipoCookie)
 );
 
--- Criando a tabela Avaliacao
+
+-- Criando a tabela Avaliacao (sem FK com Usuario)
 CREATE TABLE Avaliacao (
     idAvaliacao INT AUTO_INCREMENT PRIMARY KEY,
-    idUsuario INT NOT NULL,
-    idPermissoes INT NOT NULL,  -- Nova coluna para a permissão da avaliação
     nota TINYINT CHECK (nota BETWEEN 0 AND 10),
-    dataHora TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE CASCADE,
-    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE RESTRICT
+    dataHora TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Criando a tabela DescricaoAvaliacao
+-- Criando a tabela DescricaoAvaliacao com as FKs especificadas
 CREATE TABLE DescricaoAvaliacao (
-    idDescricao INT AUTO_INCREMENT PRIMARY KEY,
-    idAvaliacao INT NOT NULL, 
-    idUsuario INT NOT NULL,  -- Nova coluna para o usuário da descrição
-    idPermissoes INT NOT NULL,  -- Nova coluna para a permissão da descrição
+    idDescricaoAvaliacao INT AUTO_INCREMENT PRIMARY KEY,
+    idUsuario INT NOT NULL,
+    idPermissoes INT NOT NULL,
+    idAvaliacao INT NOT NULL,
     descricao TEXT NOT NULL,
     dataHora TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (idAvaliacao) REFERENCES Avaliacao(idAvaliacao) ON DELETE CASCADE,
     FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE RESTRICT,
-    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE RESTRICT
+    FOREIGN KEY (idPermissoes) REFERENCES Permissoes(idPermissoes) ON DELETE RESTRICT,
+    FOREIGN KEY (idAvaliacao) REFERENCES Avaliacao(idAvaliacao) ON DELETE RESTRICT
 );
+
 
 
 
@@ -75,20 +62,21 @@ VALUES (?, ?, ?,?);
 INSERT INTO Permissoes 
 VALUES(default, default);
 
-INSERT INTO CookiesPersonalizados (idUsuario, tipoCookie, valor)
-VALUES (?, ?, ?)
-ON DUPLICATE KEY UPDATE
-    valor = VALUES(valor);
+INSERT INTO CookiesPersonalizados (idUsuario, idPermissoes, tipoCookie, valor)
+VALUES (?, ?, ?, ?);
+
+
 
 -- Inserir ou atualizar avaliação
-INSERT INTO Avaliacao (idUsuario, nota, idPermissoes)
-VALUES (?, ?)
-ON DUPLICATE KEY UPDATE nota = VALUES(nota);
+INSERT INTO Avaliacao (nota, dataHora)
+VALUES (?, NOW());
+
 
 -- Inserir ou atualizar descrição
-INSERT INTO DescricaoAvaliacao (idAvaliacao, idUsuario, idPermissoes, descricao)
-VALUES (?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE descricao = VALUES(descricao);
+INSERT INTO DescricaoAvaliacao (idUsuario, idPermissoes, idAvaliacao, descricao, dataHora)
+VALUES (?, ?, ?, ?, NOW());
+
+
 
 
 -- Atualizar o perfil do usuário (nome, email ou senha)
@@ -104,9 +92,6 @@ FROM Usuario u
 INNER JOIN Permissoes p ON u.idPermissoes = p.idPermissoes
 WHERE u.email = ? AND u.senha = ?;
 
-SELECT a.nota, da.descricao
-FROM Avaliacao a
-INNER JOIN DescricaoAvaliacao da ON a.idAvaliacao = da.idAvaliacao;
 
 --  calcular nota media e contar o numero de avaliaçoes
 SELECT
@@ -132,10 +117,8 @@ FROM Usuario
 WHERE email = ?;
 
 UPDATE Usuario 
-SET senha = ?  -- Aqui, você usaria o hash gerado com bcrypt para a nova senha
+SET senha = ?
 WHERE email = ?;
 
 -- Excluir o usuário e suas avaliações associadas
 DELETE FROM Usuario WHERE idUsuario = ?;
-DELETE FROM Avaliacao WHERE idUsuario = ?;
-DELETE FROM DescricaoAvaliacao WHERE idAvaliacao IN (SELECT idAvaliacao FROM Avaliacao WHERE idUsuario = ?);
