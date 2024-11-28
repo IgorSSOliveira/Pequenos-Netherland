@@ -85,6 +85,9 @@ INNER JOIN Permissoes p ON u.idPermissoes = p.idPermissoes
 SET u.nomeCompleto = ?, u.email = ?, u.senha = ?
 WHERE u.idUsuario = ?;
 
+-- Consultar apenas o nome do usuario
+SELECT nomeCompleto FROM Usuario WHERE idUsuario = ?;
+
 
 -- Consultar usuário para login
 SELECT u.idUsuario, u.nomeCompleto, u.email, u.senha, p.idPermissoes
@@ -92,13 +95,60 @@ FROM Usuario u
 INNER JOIN Permissoes p ON u.idPermissoes = p.idPermissoes
 WHERE u.email = ? AND u.senha = ?;
 
-
---  calcular nota media e contar o numero de avaliaçoes
+-- 1. Calcular média de todos os votos
 SELECT
-    AVG(a.nota) AS nota_media,
-    COUNT(*) AS total_avaliacoes
-FROM Avaliacao a
-INNER JOIN DescricaoAvaliacao da ON a.idAvaliacao = da.idAvaliacao;
+    AVG(nota) AS nota_media
+FROM Avaliacao;
+
+-- 2. Total de todas as pessoas que votaram
+SELECT COUNT(DISTINCT idUsuario) AS total_votantes
+FROM DescricaoAvaliacao;
+
+-- 3. Total de votos para cada nota (0 a 10)
+SELECT COUNT(*) AS total_votos_0
+FROM Avaliacao
+WHERE nota = 0;
+
+SELECT COUNT(*) AS total_votos_1
+FROM Avaliacao
+WHERE nota = 1;
+
+SELECT COUNT(*) AS total_votos_2
+FROM Avaliacao
+WHERE nota = 2;
+
+SELECT COUNT(*) AS total_votos_3
+FROM Avaliacao
+WHERE nota = 3;
+
+SELECT COUNT(*) AS total_votos_4
+FROM Avaliacao
+WHERE nota = 4;
+
+SELECT COUNT(*) AS total_votos_5
+FROM Avaliacao
+WHERE nota = 5;
+
+SELECT COUNT(*) AS total_votos_6
+FROM Avaliacao
+WHERE nota = 6;
+
+SELECT COUNT(*) AS total_votos_7
+FROM Avaliacao
+WHERE nota = 7;
+
+SELECT COUNT(*) AS total_votos_8
+FROM Avaliacao
+WHERE nota = 8;
+
+SELECT COUNT(*) AS total_votos_9
+FROM Avaliacao
+WHERE nota = 9;
+
+SELECT COUNT(*) AS total_votos_10
+FROM Avaliacao
+WHERE nota = 10;
+
 
 -- encontrar as 5 melhores caracteristica
 SELECT
@@ -120,5 +170,5 @@ UPDATE Usuario
 SET senha = ?
 WHERE email = ?;
 
--- Excluir o usuário e suas avaliações associadas
+-- Excluir o usuário
 DELETE FROM Usuario WHERE idUsuario = ?;
